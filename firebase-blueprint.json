@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Property": {
+      "title": "Property Listing",
+      "description": "A real estate property listing in Nigeria.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number", "description": "Price in Naira (NGN)" },
+        "priceUSD": { "type": "number", "description": "Price in USD" },
+        "location": { "type": "string", "description": "City and State in Nigeria" },
+        "category": { "type": "string", "enum": ["House", "Land", "Other"] },
+        "subcategory": { "type": "string" },
+        "status": { "type": "string", "enum": ["For Sale", "For Rent", "Sold"] },
+        "featured": { "type": "boolean" },
+        "imageUrls": { "type": "array", "items": { "type": "string" } },
+        "videoUrl": { "type": "string" },
+        "amenities": { "type": "array", "items": { "type": "string" } },
+        "size": { "type": "string", "description": "e.g., 600sqm, 4 bedrooms" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "ownerId": { "type": "string", "description": "Admin UID who created the listing" }
+      },
+      "required": ["title", "description", "price", "location", "category", "status", "imageUrls"]
+    },
+    "Inquiry": {
+      "title": "Property Inquiry",
+      "description": "A lead generated from a contact form or property page.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "message": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "propertyTitle": { "type": "string" },
+        "status": { "type": "string", "enum": ["New", "Contacted", "Closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "phone", "message", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/properties/{propertyId}": {
+      "schema": "Property",
+      "description": "Public property listings."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Contact inquiries (Admin only read)."
+    }
+  }
+}

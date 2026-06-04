@@ -1,0 +1,15 @@
+{
+  "name": "Loveth TopNotch Global Properties",
+  "description": "Premium Nigerian real estate platform by Loveth TopNotch Global Properties Ltd. Specializing in luxury homes, lands, and high-ROI investments for local and diaspora clients.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Real Estate Listings",
+    "AI Property Assistant",
+    "Admin Dashboard",
+    "WhatsApp Integration"
+  ]
+}
