@@ -48,9 +48,48 @@ import { useProperties, Property } from "@/hooks/useProperties";
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
+
+// Compress image before saving to base64 for Firestore storage when API upload fails
+const compressImage = (file: File, maxDimension = 800, quality = 0.6): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } else {
+          resolve(event.target?.result as string);
+        }
+      };
+      img.onerror = () => resolve(event.target?.result as string);
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
   });
 };
 
@@ -221,26 +260,56 @@ export default function AdminPage() {
       const uploadedVideoUrls: string[] = [];
 
       for (const item of mediaFiles) {
-        const base64 = await fileToBase64(item.file);
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: item.file.name,
-            base64Data: base64
-          })
-        });
+        let fileUrl = "";
+        
+        // 1. First, attempt backend upload
+        try {
+          const base64 = await fileToBase64(item.file);
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fileName: item.file.name,
+              base64Data: base64
+            })
+          });
 
-        if (!response.ok) {
-          throw new Error(`Upload failed for file: ${item.file.name}`);
+          if (response.ok) {
+            const resData = await response.json();
+            if (resData.url) {
+              fileUrl = resData.url;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn(`[Upload Warning] Express backend upload failed for "${item.file.name}". Falling back to premium client-side storage encoding.`, uploadErr);
         }
 
-        const resData = await response.json();
-        if (resData.url) {
+        // 2. Secondary Fallback: Save file inside firestore directly as safe base64
+        if (!fileUrl) {
           if (item.type === "image") {
-            uploadedImageUrls.push(resData.url);
+            // Compress image down to elegant high-end web dimensions for direct base64 firestore saving
+            console.log(`[Backup Mode] Resizing and compressing image "${item.file.name}" to fit safely within cloud limits...`);
+            fileUrl = await compressImage(item.file, 800, 0.6);
           } else {
-            uploadedVideoUrls.push(resData.url);
+            // Video: Check size first. Firestore document size limit is 1MB.
+            // We set 1.2MB limit for base64 which expands slightly, so max video file size ~850KB.
+            const sizeInMb = item.file.size / (1024 * 1024);
+            if (sizeInMb > 0.85) {
+              throw new Error(
+                `The video file "${item.file.name}" is too large (${sizeInMb.toFixed(2)}MB).\n\n` +
+                `Since this portal is running on a static serverless host (Netlify), large videos cannot be uploaded without a dedicated backend server.\n\n` +
+                `Please upload a smaller, highly-compressed video clip under 850KB, or upload images instead.`
+              );
+            }
+            fileUrl = await fileToBase64(item.file);
+          }
+        }
+
+        if (fileUrl) {
+          if (item.type === "image") {
+            uploadedImageUrls.push(fileUrl);
+          } else {
+            uploadedVideoUrls.push(fileUrl);
           }
         }
       }
@@ -284,7 +353,7 @@ export default function AdminPage() {
         description: "",
       });
 
-      alert("Property created!");
+      alert("Property published successfully!");
       setDialogOpen(false);
     } catch (err: any) {
       console.error("Error creating property listing:", err);
