@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { LOVETH_CONTACT } from "@/constants";
 import { 
-  MapPin, Maximize, Calendar, Share3, 
+  MapPin, Maximize, Calendar, 
   Heart, Download, Mail, Phone, 
   MessageCircle, ArrowLeft, CheckCircle2, Loader2, Share2
 } from "lucide-react";
@@ -25,7 +25,103 @@ interface Property {
   size: string;
   imageUrls: string[];
   amenities: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
 }
+
+const MOCK_PROPERTIES_DETAILS: Record<string, Property> = {
+  "1": {
+    id: "1",
+    title: "Luxury 5 Bedroom Duplex",
+    description: "Experience the pinnacle of luxury living in this magnificent 5-bedroom fully detached duplex with a clean boys' quarters located premium Lekki Phase 1, Lagos. Crafted to high international standards, this magnificent masterpiece features ultra-premium materials, custom lighting arrays, and spacious living chambers designed for absolute comfort.",
+    price: 150000000,
+    location: "Lekki Phase 1, Lagos",
+    category: "House",
+    status: "For Sale",
+    size: "800sqm",
+    imageUrls: [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800&h=600"
+    ],
+    amenities: ["Swimming Pool", "En-suite Bedrooms", "CCTV System", "Fully Fitted Kitchen", "Smart Automation"]
+  },
+  "2": {
+    id: "2",
+    title: "Prime 600sqm Residential Plot",
+    description: "This is a premium, 100% dry and gated residential parcel measuring 600sqm in the rapidly building axis of Sangotedo, Ajah, Lagos. It possesses secure architectural boundaries and is fully documented under top titles (C of O), representing an unmatched investment for developer builds or custom high-end family mansions.",
+    price: 45000000,
+    location: "Sangotedo, Ajah, Lagos",
+    category: "Land",
+    status: "For Sale",
+    size: "600sqm",
+    imageUrls: [
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&q=80&w=800&h=600"
+    ],
+    amenities: ["Paved Access Road", "Electricity Infrastructure", "Gated Security", "Proper Drainage System"]
+  },
+  "3": {
+    id: "3",
+    title: "Ultra-Modern 4 Bedroom Terrace",
+    description: "A prestigious 4-bedroom terraced home with executive class design features situated in the diplomatic and highly secure Maitama neighborhood in Abuja. Outfitted with master-built glass balconies, integrated home gyms, double-high ceilings, and state of the art climate management.",
+    price: 280000000,
+    location: "Maitama, Abuja",
+    category: "House",
+    status: "For Sale",
+    size: "500sqm",
+    imageUrls: [
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&q=80&w=800&h=600"
+    ],
+    amenities: ["Rooftop Terrace", "Integrated Sound", "Executive Lounge", "24/7 Security Patrols"]
+  },
+  "4": {
+    id: "4",
+    title: "3 Bedroom Apartment with BQ",
+    description: "Elegant 3-bedroom luxury apartment plus fully fitted Boys' Quarters located inside key commercial core of Victoria Island, Lagos. Perfect residence for corporate directors, expatriates, or investment-minded landlords seeking reliable top-tier rental cashflows on short-let services.",
+    price: 120000000,
+    location: "Victoria Island, Lagos",
+    category: "House",
+    status: "For Rent",
+    size: "350sqm",
+    imageUrls: [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800&h=600"
+    ],
+    amenities: ["Fitted Kitchen", "Passenger Elevators", "Generous Parking", "Water Treatment Infrastructure"]
+  },
+  "5": {
+    id: "5",
+    title: "Commercial Development Land",
+    description: "Outstanding commercial plot measuring 1,200sqm boasting dual-access frontage onto busy Ikorodu Road, Lagos. Perfectly situated for office complexes, logistic operational parks, supermarkets, or high-density retail nodes in an area with explosive high daily commute traction.",
+    price: 25000000,
+    location: "Ikorodu, Lagos",
+    category: "Land",
+    status: "For Sale",
+    size: "1200sqm",
+    imageUrls: [
+      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800&h=600"
+    ],
+    amenities: ["Dual Frontage", "Guaranteed Dry Solid Ground", "Close Transit Proximity"]
+  },
+  "6": {
+    id: "6",
+    title: "Palatial 7 Bedroom Mansion",
+    description: "Extravagant 7-bedroom water-facing architectural mansion on the ultra-exclusive Banana Island, Lagos. Designed without compromise, featuring double-height marble lobbies, customized wellness spas, private home theatres, indoor elevator systems, and private yacht slipway.",
+    price: 1500000000,
+    location: "Banana Island, Lagos",
+    category: "House",
+    status: "For Sale",
+    size: "1500sqm",
+    imageUrls: [
+      "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=800&h=600",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800&h=600"
+    ],
+    amenities: ["Waterfront Access", "Private Elevator", "Home Cinema", "Direct Yacht Berth", "Indoor/Outdoor Dual Pools"]
+  }
+};
 
 export default function PropertyDetailsPage() {
   const { id } = useParams();
@@ -42,9 +138,16 @@ export default function PropertyDetailsPage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setProperty({ id: docSnap.id, ...docSnap.data() } as Property);
+        } else if (MOCK_PROPERTIES_DETAILS[id]) {
+          // Fall back to Mock Detail
+          setProperty(MOCK_PROPERTIES_DETAILS[id]);
         }
       } catch (err) {
-        handleFirestoreError(err, "get", `properties/${id}`);
+        if (MOCK_PROPERTIES_DETAILS[id]) {
+          setProperty(MOCK_PROPERTIES_DETAILS[id]);
+        } else {
+          handleFirestoreError(err, "get", `properties/${id}`);
+        }
       } finally {
         setLoading(false);
       }
@@ -71,6 +174,25 @@ export default function PropertyDetailsPage() {
 
     try {
       await addDoc(collection(db, "inquiries"), data);
+
+      // Send direct email notice to her email
+      try {
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            message: data.message,
+            propertyTitle: data.propertyTitle,
+            subject: `New Property Inquiry: ${data.propertyTitle} from ${data.name}`,
+          }),
+        });
+      } catch (emailErr) {
+        console.error("Failed to trigger email api but saved to Firestore:", emailErr);
+      }
+
       setSubmitted(true);
     } catch (err) {
       handleFirestoreError(err, "create", "inquiries");
@@ -182,6 +304,49 @@ export default function PropertyDetailsPage() {
               ))}
             </div>
           </div>
+
+          {/* Premium Video Tours Showcase Section */}
+          {((property.videoUrls && property.videoUrls.length > 0) || property.videoUrl) && (
+            <div className="space-y-6 pt-12 border-t font-serif">
+              <h2 className="text-2xl font-bold text-black font-serif">Property Video Showcase</h2>
+              <p className="text-sm font-sans text-gray-500">
+                Experience a detailed virtual tour of this premium asset, curated personally to demonstrate its exclusive value.
+              </p>
+              <div className="space-y-8">
+                {/* Main Video */}
+                {property.videoUrl && (
+                  <div className="rounded-3xl overflow-hidden bg-black aspect-video shadow-2xl relative border border-gray-100 max-w-4xl">
+                    <video 
+                      src={property.videoUrl} 
+                      controls 
+                      playsInline
+                      className="w-full h-full object-contain"
+                      poster={property.imageUrls[0]}
+                    />
+                  </div>
+                )}
+
+                {/* Additional Videos */}
+                {property.videoUrls && property.videoUrls.filter(v => v !== property.videoUrl).length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    {property.videoUrls.filter(v => v !== property.videoUrl).map((vUrl, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <h4 className="text-xs uppercase tracking-widest text-[#C9A84C] font-bold font-sans">Virtual Walkthrough #{idx + 2}</h4>
+                        <div className="rounded-2xl overflow-hidden bg-black aspect-video shadow-md border">
+                          <video 
+                            src={vUrl} 
+                            controls 
+                            playsInline
+                            className="w-full h-full object-contain" 
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar Inquiry */}

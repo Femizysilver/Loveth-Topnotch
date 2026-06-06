@@ -9,10 +9,11 @@ export interface Property {
   location: string;
   price: number;
   category: string;
-  subcategory: string;
+  subcategory?: string;
   status: string;
   size: string;
-  imageUrl: string;
+  imageUrl?: string;
+  imageUrls?: string[];
   description?: string;
   amenities?: string[];
   featured?: boolean;

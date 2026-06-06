@@ -2,16 +2,94 @@ import Hero from "@/components/home/Hero";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Home, LandPlot, Key, ShieldCheck, Globe, TrendingUp, Users, MessageSquare } from "lucide-react";
+import { Home, LandPlot, Key, ShieldCheck, Globe, TrendingUp, Users, MessageSquare, Loader2, CheckCircle2 } from "lucide-react";
 import { LOVETH_CONTACT } from "@/constants";
+import { useState, useMemo } from "react";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { handleFirestoreError } from "@/lib/errorHandlers";
+import { useProperties } from "@/hooks/useProperties";
+import PropertyCard from "@/components/properties/PropertyCard";
 
 export default function HomePage() {
+  const { properties: dbProperties } = useProperties(3);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    propertyInterest: "General Inquiry",
+    message: ""
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const featuredProperties = useMemo(() => {
+    const fallbackMocks = [
+      { id: "1", title: "Luxury 5 Bedroom Duplex", location: "Lekki Phase 1, Lagos", price: 150000000, category: "House", status: "For Sale", size: "800sqm", imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800&h=600" },
+      { id: "2", title: "Prime 600sqm Residential Plot", location: "Sangotedo, Ajah, Lagos", price: 45000000, category: "Land", status: "For Sale", size: "600sqm", imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=800&h=600" },
+      { id: "3", title: "Ultra-Modern 4 Bedroom Terrace", location: "Maitama, Abuja", price: 280000000, category: "House", status: "For Sale", size: "500sqm", imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=600" },
+    ];
+    
+    const results = [...dbProperties];
+    if (results.length < 3) {
+      const needed = 3 - results.length;
+      const filteredMocks = fallbackMocks.filter(
+        mock => !dbProperties.some(real => real.title.toLowerCase() === mock.title.toLowerCase())
+      );
+      results.push(...filteredMocks.slice(0, needed));
+    }
+    return results.slice(0, 3);
+  }, [dbProperties]);
+
   const categories = [
     { name: "Luxury Houses", icon: <Home size={32} />, path: "/properties?category=House", count: "124 available" },
     { name: "Prime Land", icon: <LandPlot size={32} />, path: "/properties?category=Land", count: "86 available" },
     { name: "Investment", icon: <TrendingUp size={32} />, path: "/properties?category=Other", count: "50-75% ROI" },
     { name: "For Rent", icon: <Key size={32} />, path: "/properties?status=For Rent", count: "45 available" },
   ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || "Not specified",
+      message: formData.message,
+      status: "New",
+      createdAt: serverTimestamp()
+    };
+
+    try {
+      // 1. Save to Firestore
+      await addDoc(collection(db, "inquiries"), payload);
+
+      // 2. Dispatch email trigger API
+      try {
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || "Not specified",
+            message: formData.message,
+            subject: `New Lead: ${formData.propertyInterest} from ${formData.name}`,
+            propertyTitle: formData.propertyInterest,
+          }),
+        });
+      } catch (emailErr) {
+        console.error("Failed to post email trigger but recorded in Firestore:", emailErr);
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      handleFirestoreError(err, "create" as any, "inquiries");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-24 pb-24">
@@ -106,26 +184,8 @@ export default function HomePage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[1, 2, 3].map((id) => (
-            <div key={id} className="group cursor-pointer">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl mb-4">
-                <img 
-                  src={`https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800&h=600&sig=${id}`}
-                  alt="Property"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute top-4 left-4 bg-[#C9A84C] text-white text-xs font-bold px-3 py-1 rounded-full">
-                  Featured
-                </div>
-              </div>
-              <h3 className="font-serif text-2xl font-bold group-hover:text-[#C9A84C] transition-colors">Luxury 5 Bedroom Duplex</h3>
-              <p className="text-gray-500 text-sm mt-1">Lekki Phase 1, Lagos</p>
-              <div className="flex justify-between items-center mt-4">
-                <p className="text-xl font-bold">₦150,000,000</p>
-                <Link to={`/properties/${id}`} className="text-sm font-medium underline">Details</Link>
-              </div>
-            </div>
+          {featuredProperties.map((p) => (
+            <PropertyCard key={p.id} property={p as any} />
           ))}
         </div>
       </section>
@@ -156,40 +216,93 @@ export default function HomePage() {
       </section>
 
       {/* Mini Contact Form */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="home-contact-form">
         <div className="bg-white rounded-3xl shadow-2xl p-12 border-t-8 border-[#C9A84C]">
-          <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl font-bold">Let's Find Your Property</h2>
-            <p className="text-gray-500">Fill out the form below and Loveth will contact you personally.</p>
-          </div>
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Full Name</label>
-              <input className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C]" placeholder="John Doe" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Email Address</label>
-              <input className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C]" placeholder="john@example.com" />
-            </div>
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Property Interest</label>
-              <select className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C]">
-                <option>General Inquiry</option>
-                <option>Luxury Mansion</option>
-                <option>Secure Land</option>
-                <option>Investment Property</option>
-              </select>
-            </div>
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Message</label>
-              <textarea className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C] h-32" placeholder="Tell us what you're looking for..."></textarea>
-            </div>
-            <div className="md:col-span-2 pt-4">
-              <Button className="w-full bg-[#C9A84C] hover:bg-[#C9A84C]/90 text-white font-bold py-8 text-lg rounded-2xl shadow-lg shadow-[#C9A84C]/20 transition-all active:scale-95">
-                Send Message to Loveth
+          {submitted ? (
+            <div className="text-center py-16 space-y-6">
+              <div className="bg-green-50 text-green-600 w-20 h-20 rounded-full mx-auto flex items-center justify-center border border-green-200">
+                <CheckCircle2 size={44} />
+              </div>
+              <h2 className="text-3xl font-serif font-bold">Message Delivered Successfully!</h2>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Thank you for reaching out. Your request has been sent to Loveth. She will contact you directly at your convenience.
+              </p>
+              <Button onClick={() => {
+                setSubmitted(false);
+                setFormData({ name: "", email: "", phone: "", propertyInterest: "General Inquiry", message: "" });
+              }} className="bg-black text-white hover:bg-gray-800 rounded-xl px-8 h-12">
+                Send Another Inquiry
               </Button>
             </div>
-          </form>
+          ) : (
+            <>
+              <div className="text-center space-y-4 mb-12">
+                <h2 className="text-3xl font-bold font-serif">Let's Find Your Property</h2>
+                <p className="text-gray-500">Fill out the form below and Loveth will contact you personally.</p>
+              </div>
+              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Full Name</label>
+                  <input 
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
+                    className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C] h-14" 
+                    placeholder="John Doe" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Email Address</label>
+                  <input 
+                    required
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
+                    className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C] h-14" 
+                    placeholder="john@example.com" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Phone Number (Optional)</label>
+                  <input 
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))}
+                    className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C] h-14" 
+                    placeholder="+234..." 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Property Interest</label>
+                  <select 
+                    value={formData.propertyInterest}
+                    onChange={(e) => setFormData(p => ({ ...p, propertyInterest: e.target.value }))}
+                    className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C] h-14 appearance-none"
+                  >
+                    <option>General Inquiry</option>
+                    <option>Luxury Mansion</option>
+                    <option>Secure Land</option>
+                    <option>Investment Property</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-sm font-bold uppercase tracking-widest text-gray-400">Message</label>
+                  <textarea 
+                    required
+                    value={formData.message}
+                    onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))}
+                    className="w-full bg-gray-50 border-none px-6 py-4 rounded-xl focus:ring-2 focus:ring-[#C9A84C] h-32" 
+                    placeholder="Tell us what you're looking for..."
+                  />
+                </div>
+                <div className="md:col-span-2 pt-4">
+                  <Button disabled={submitting} type="submit" className="w-full bg-[#C9A84C] hover:bg-[#C9A84C]/90 text-white font-bold py-8 text-lg rounded-2xl shadow-lg shadow-[#C9A84C]/20 transition-all active:scale-95">
+                    {submitting ? <Loader2 className="animate-spin text-white" /> : "Send Message to Loveth"}
+                  </Button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       </section>
     </div>

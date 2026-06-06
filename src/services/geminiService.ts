@@ -6,7 +6,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export async function getChatResponse(message: string, history: { role: string; parts: { text: string }[] }[], propertiesContext: string) {
   try {
     const model = ai.models.generateContent({
-      model: "gemini-3-flash-preview", 
+      model: "gemini-2.5-flash", 
       contents: [
         ...history,
         { role: "user", parts: [{ text: message }] }

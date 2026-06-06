@@ -29,6 +29,24 @@ export default function ContactPage() {
 
     try {
       await addDoc(collection(db, "inquiries"), data);
+      
+      // Send direct email notice to her email
+      try {
+        await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            subject: data.subject,
+            message: data.message,
+            phone: data.phone,
+          }),
+        });
+      } catch (emailErr) {
+        console.error("Failed to trigger email api but saved layout to Firestore:", emailErr);
+      }
+
       setSubmitted(true);
     } catch (err) {
       handleFirestoreError(err, "create", "inquiries");

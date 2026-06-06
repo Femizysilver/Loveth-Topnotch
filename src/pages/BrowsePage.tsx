@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, SlidersHorizontal, Grid2X2, List as ListIcon, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PROPERTY_TYPES } from "@/constants";
+import { useProperties } from "@/hooks/useProperties";
 
 // Mock Data for initial view
 const MOCK_PROPERTIES = [
@@ -19,6 +20,7 @@ const MOCK_PROPERTIES = [
 ];
 
 export default function BrowsePage() {
+  const { properties: dbProperties } = useProperties();
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,15 +28,26 @@ export default function BrowsePage() {
   const categoryFilter = searchParams.get("category") || "all";
   const statusFilter = searchParams.get("status") || "all";
 
+  const allProperties = useMemo(() => {
+    // Show newly properties created first, followed by illustrative mock properties,
+    // filtered against duplication by title
+    const uniqueMocks = MOCK_PROPERTIES.filter(
+      (mock) => !dbProperties.some((real) => real.title.toLowerCase() === mock.title.toLowerCase())
+    );
+    return [...dbProperties, ...uniqueMocks];
+  }, [dbProperties]);
+
   const filteredProperties = useMemo(() => {
-    return MOCK_PROPERTIES.filter(p => {
-      const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           p.location.toLowerCase().includes(searchQuery.toLowerCase());
+    return allProperties.filter(p => {
+      const title = p.title || "";
+      const location = p.location || "";
+      const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           location.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
       const matchesStatus = statusFilter === "all" || p.status === statusFilter;
       return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [searchQuery, categoryFilter, statusFilter]);
+  }, [allProperties, searchQuery, categoryFilter, statusFilter]);
 
   const updateFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);

@@ -9,13 +9,16 @@ interface Property {
   location: string;
   price: number;
   category: string;
-  subcategory: string;
+  subcategory?: string;
   status: string;
   size: string;
-  imageUrl: string;
+  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export default function PropertyCard({ property }: { property: Property }) {
+  const displayImageUrl = property.imageUrl || (property.imageUrls && property.imageUrls[0]) || "https://picsum.photos/800/600";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -26,7 +29,7 @@ export default function PropertyCard({ property }: { property: Property }) {
       <Link to={`/properties/${property.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden">
           <img
-            src={property.imageUrl}
+            src={displayImageUrl}
             alt={property.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             referrerPolicy="no-referrer"

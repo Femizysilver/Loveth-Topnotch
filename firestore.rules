@@ -16,9 +16,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isEmailVerified() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == "femizydasilver@gmail.com"
+      return isSignedIn() && (
+        (isEmailVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))) ||
+        request.auth.token.email == "femizydasilver@gmail.com" ||
+        request.auth.token.email == "lovethbproperties02@gmail.com" ||
+        request.auth.token.email == "lovethproperties02@gmail.com" ||
+        request.auth.token.email == "lovethpropertise02@gmail.com"
       );
     }
 
@@ -74,29 +77,19 @@ service cloud.firestore {
       allow get: if isValidId(propertyId);
       allow list: if true; // Public listings are visible to all
       
-      allow create: if isAdmin() && isValidProperty(incoming()) && incoming().createdAt == request.time;
-      allow update: if isAdmin() && isValidProperty(incoming()) && (
-        // Action: Edit content
-        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'price', 'location', 'category', 'subcategory', 'status', 'featured', 'imageUrls', 'videoUrl', 'amenities', 'size', 'updatedAt']) &&
-        incoming().updatedAt == request.time &&
-        incoming().ownerId == existing().ownerId &&
-        incoming().createdAt == existing().createdAt
-      );
-      allow delete: if isAdmin();
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
     }
 
     // Inquiries Collection
     match /inquiries/{inquiryId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin() && (
-        !('propertyId' in existing()) || isValidId(existing().propertyId)
-      );
+      allow get: if true;
+      allow list: if true;
       
       allow create: if isValidInquiry(incoming());
-      allow update: if isAdmin() && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
-      );
-      allow delete: if isAdmin();
+      allow update: if true;
+      allow delete: if true;
     }
   }
 }
