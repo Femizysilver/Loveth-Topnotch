@@ -6,18 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, SlidersHorizontal, Grid2X2, List as ListIcon, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PROPERTY_TYPES } from "@/constants";
 import { useProperties } from "@/hooks/useProperties";
-
-// Mock Data for initial view
-const MOCK_PROPERTIES = [
-  { id: "1", title: "Luxury 5 Bedroom Duplex", location: "Lekki Phase 1, Lagos", price: 150000000, category: "House", subcategory: "Duplexes", status: "For Sale", size: "800sqm", imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800&h=600" },
-  { id: "2", title: "Prime 600sqm Residential Plot", location: "Sangotedo, Ajah, Lagos", price: 45000000, category: "Land", subcategory: "Land for Building", status: "For Sale", size: "600sqm", imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=800&h=600" },
-  { id: "3", title: "Ultra-Modern 4 Bedroom Terrace", location: "Maitama, Abuja", price: 280000000, category: "House", subcategory: "Terraced Houses", status: "For Sale", size: "500sqm", imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=600" },
-  { id: "4", title: "3 Bedroom Apartment with BQ", location: "Victoria Island, Lagos", price: 120000000, category: "House", subcategory: "Apartments / Flats", status: "For Rent", size: "350sqm", imageUrl: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&q=80&w=800&h=600" },
-  { id: "5", title: "Commercial Development Land", location: "Ikorodu, Lagos", price: 25000000, category: "Land", subcategory: "Commercial Land", status: "For Sale", size: "1200sqm", imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800&h=600" },
-  { id: "6", title: "Palatial 7 Bedroom Mansion", location: "Banana Island, Lagos", price: 1500000000, category: "House", subcategory: "Mansion / Mansionette", status: "For Sale", size: "1500sqm", imageUrl: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&q=80&w=800&h=600" },
-];
 
 export default function BrowsePage() {
   const { properties: dbProperties } = useProperties();
@@ -27,31 +16,55 @@ export default function BrowsePage() {
 
   const categoryFilter = searchParams.get("category") || "all";
   const statusFilter = searchParams.get("status") || "all";
-
-  const allProperties = useMemo(() => {
-    // Show newly properties created first, followed by illustrative mock properties,
-    // filtered against duplication by title
-    const uniqueMocks = MOCK_PROPERTIES.filter(
-      (mock) => !dbProperties.some((real) => real.title.toLowerCase() === mock.title.toLowerCase())
-    );
-    return [...dbProperties, ...uniqueMocks];
-  }, [dbProperties]);
+  const locationParam = searchParams.get("location") || "";
+  const priceRangeParam = searchParams.get("priceRange") || "all";
 
   const filteredProperties = useMemo(() => {
-    return allProperties.filter(p => {
+    return dbProperties.filter(p => {
       const title = p.title || "";
       const location = p.location || "";
-      const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           location.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
-      const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-      return matchesSearch && matchesCategory && matchesStatus;
+      const price = p.price || 0;
+      const category = p.category || "";
+      const status = p.status || "";
+
+      // 1. Keyword search (checks title or location)
+      const matchesSearch = searchQuery 
+        ? title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          location.toLowerCase().includes(searchQuery.toLowerCase())
+        : true;
+
+      // 2. Specific Location parameter filter
+      const matchesLocation = locationParam 
+        ? location.toLowerCase().includes(locationParam.toLowerCase())
+        : true;
+
+      // 3. Category
+      const matchesCategory = categoryFilter === "all" || category === categoryFilter;
+
+      // 4. Status
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
+
+      // 5. Price range
+      let matchesPrice = true;
+      if (priceRangeParam !== "all") {
+        if (priceRangeParam === "under-50m") {
+          matchesPrice = price < 50000000;
+        } else if (priceRangeParam === "50m-150m") {
+          matchesPrice = price >= 50000000 && price <= 150000000;
+        } else if (priceRangeParam === "150m-500m") {
+          matchesPrice = price >= 150000000 && price <= 500000000;
+        } else if (priceRangeParam === "500m-plus") {
+          matchesPrice = price > 500000000;
+        }
+      }
+
+      return matchesSearch && matchesLocation && matchesCategory && matchesStatus && matchesPrice;
     });
-  }, [allProperties, searchQuery, categoryFilter, statusFilter]);
+  }, [dbProperties, searchQuery, locationParam, categoryFilter, statusFilter, priceRangeParam]);
 
   const updateFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
-    if (value === "all") {
+    if (value === "all" || value === "") {
       newParams.delete(key);
     } else {
       newParams.set(key, value);
@@ -61,27 +74,31 @@ export default function BrowsePage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pt-12 pb-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-transparent">
         
         {/* Header */}
         <div className="mb-12 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 animate-fade-in">
             <div className="space-y-2">
-              <h1 className="text-5xl font-bold font-serif tracking-tight">Browse <span className="text-[#C9A84C]">Properties</span></h1>
+              <h1 className="text-5xl font-bold font-serif tracking-tight text-black">
+                Browse <span className="text-[#C9A84C]">Properties</span>
+              </h1>
               <p className="text-gray-500">Discover your next wise investment from our curated collection.</p>
             </div>
             <div className="flex gap-2">
               <Button 
                 variant={viewMode === "grid" ? "default" : "outline"} 
                 onClick={() => setViewMode("grid")}
-                className={viewMode === "grid" ? "bg-black" : ""}
+                className={viewMode === "grid" ? "bg-black text-white hover:bg-black/90" : ""}
+                id="btn-view-grid"
               >
                 <Grid2X2 size={20} />
               </Button>
               <Button 
                 variant={viewMode === "list" ? "default" : "outline"} 
                 onClick={() => setViewMode("list")}
-                className={viewMode === "list" ? "bg-black" : ""}
+                className={viewMode === "list" ? "bg-black text-white hover:bg-black/90" : ""}
+                id="btn-view-list"
               >
                 <ListIcon size={20} />
               </Button>
@@ -93,16 +110,17 @@ export default function BrowsePage() {
             <div className="relative w-full lg:flex-grow">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <Input 
-                placeholder="Search by title or location..." 
+                id="property-search-input"
+                placeholder="Search by title or quick keywords..." 
                 className="pl-12 py-6 border-none bg-gray-50 rounded-2xl focus:ring-2 focus:ring-[#C9A84C]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             
-            <div className="flex w-full lg:w-auto gap-4">
+            <div className="grid grid-cols-2 sm:flex sm:flex-row w-full lg:w-auto gap-4">
               <Select value={categoryFilter} onValueChange={(v) => updateFilter("category", v)}>
-                <SelectTrigger className="w-full lg:w-48 py-6 rounded-2xl border-gray-100 bg-gray-50">
+                <SelectTrigger id="category-filter-select" className="w-full sm:w-40 py-6 rounded-2xl border-gray-100 bg-gray-50">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -113,8 +131,21 @@ export default function BrowsePage() {
                 </SelectContent>
               </Select>
 
+              <Select value={priceRangeParam} onValueChange={(v) => updateFilter("priceRange", v)}>
+                <SelectTrigger id="price-range-filter-select" className="w-full sm:w-44 py-6 rounded-2xl border-gray-100 bg-gray-50">
+                  <SelectValue placeholder="Price Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Prices</SelectItem>
+                  <SelectItem value="under-50m">Under ₦50M</SelectItem>
+                  <SelectItem value="50m-150m">₦50M - ₦150M</SelectItem>
+                  <SelectItem value="150m-500m">₦150M - ₦500M</SelectItem>
+                  <SelectItem value="500m-plus">Above ₦500M</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Select value={statusFilter} onValueChange={(v) => updateFilter("status", v)}>
-                <SelectTrigger className="w-full lg:w-48 py-6 rounded-2xl border-gray-100 bg-gray-50">
+                <SelectTrigger id="status-filter-select" className="w-full sm:w-40 py-6 rounded-2xl border-gray-100 bg-gray-50">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -123,31 +154,42 @@ export default function BrowsePage() {
                   <SelectItem value="For Rent">For Rent</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button variant="outline" className="py-6 rounded-2xl border-gray-100 bg-gray-50 lg:px-6">
-                <SlidersHorizontal size={20} className="mr-2" />
-                More
-              </Button>
             </div>
           </div>
 
           {/* Active Filters */}
-          {(categoryFilter !== "all" || statusFilter !== "all" || searchQuery) && (
-            <div className="flex flex-wrap gap-2 pt-2">
+          {(categoryFilter !== "all" || statusFilter !== "all" || priceRangeParam !== "all" || locationParam !== "" || searchQuery) && (
+            <div className="flex flex-wrap gap-2 pt-2 animate-fade-in">
               {categoryFilter !== "all" && (
-                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] py-2 px-4 rounded-full flex items-center gap-2">
+                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 py-2 px-4 rounded-full flex items-center gap-2 border-none">
                   Category: {categoryFilter}
                   <X size={14} className="cursor-pointer" onClick={() => updateFilter("category", "all")} />
                 </Badge>
               )}
+              {priceRangeParam !== "all" && (
+                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 py-2 px-4 rounded-full flex items-center gap-2 border-none">
+                  Price: {
+                    priceRangeParam === "under-50m" ? "Under ₦50M" :
+                    priceRangeParam === "50m-150m" ? "₦50M - ₦150M" :
+                    priceRangeParam === "150m-500m" ? "₦150M - ₦500M" : "Above ₦500M"
+                  }
+                  <X size={14} className="cursor-pointer" onClick={() => updateFilter("priceRange", "all")} />
+                </Badge>
+              )}
+              {locationParam && (
+                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 py-2 px-4 rounded-full flex items-center gap-2 border-none">
+                  Location: {locationParam}
+                  <X size={14} className="cursor-pointer" onClick={() => updateFilter("location", "all")} />
+                </Badge>
+              )}
               {statusFilter !== "all" && (
-                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] py-2 px-4 rounded-full flex items-center gap-2">
+                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 py-2 px-4 rounded-full flex items-center gap-2 border-none">
                   Status: {statusFilter}
                   <X size={14} className="cursor-pointer" onClick={() => updateFilter("status", "all")} />
                 </Badge>
               )}
               {searchQuery && (
-                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] py-2 px-4 rounded-full flex items-center gap-2">
+                <Badge variant="secondary" className="bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 py-2 px-4 rounded-full flex items-center gap-2 border-none">
                   Search: {searchQuery}
                   <X size={14} className="cursor-pointer" onClick={() => setSearchQuery("")} />
                 </Badge>
@@ -171,8 +213,9 @@ export default function BrowsePage() {
             <h3 className="text-2xl font-serif font-bold text-gray-400">No properties found</h3>
             <p className="text-gray-500 mt-2">Try adjusting your filters or search query.</p>
             <Button 
+              id="clear-all-filters-btn"
               variant="link" 
-              className="mt-4 text-[#C9A84C]"
+              className="mt-4 text-[#C9A84C] font-semibold"
               onClick={() => {
                 setSearchParams({});
                 setSearchQuery("");
