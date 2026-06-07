@@ -39,27 +39,104 @@ export default function ChatBot() {
         ? `We current have ${properties.length} active listings including: ${properties.map(p => `${p.title} in ${p.location} for ₦${p.price.toLocaleString()}`).join('; ')}`
         : "We are currently curating new luxury listings. Please ask Loveth for off-market opportunities.";
 
-      const res = await fetch("/api/chatbot", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          history,
-          propertiesContext,
-        }),
-      });
+      let botResponse = "";
+      let fetchFailed = false;
 
-      if (!res.ok) {
-        throw new Error("API call failed");
+      try {
+        const res = await fetch("/api/chatbot", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            history,
+            propertiesContext,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          botResponse = data.response;
+        } else {
+          fetchFailed = true;
+        }
+      } catch (err) {
+        fetchFailed = true;
       }
 
-      const data = await res.json();
-      const response = data.response;
-      setMessages(prev => [...prev, { role: "assistant", text: response || "Something went wrong." }]);
+      // If Express backend is not available (e.g. deployed on static Netlify/Vercel)
+      // and a custom client-side key has been supplied, fallback smoothly.
+      if (fetchFailed) {
+        const clientApiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+        if (clientApiKey) {
+          try {
+            const geminiRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientApiKey}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      role: "user",
+                      parts: [
+                        {
+                          text: `You are the Virtual Assistant for Loveth TopNotch Global Properties, a premium real estate agency in Nigeria led by Loveth TopNotch.
+
+Guidelines:
+- Provide high-luxury, professional, secure, and warm real estate investment guidance.
+- Address the user as an expert real estate consultant.
+- Promote Loveth TopNotch's elite and verified titles.
+- Focus on building trust, particularly for diaspora and local buyers.
+
+Properties Context:
+${propertiesContext}
+
+Conversation History:
+${history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.parts[0].text}`).join("\n")}
+
+Now reply to the following user message:
+User: ${userMessage}`
+                        }
+                      ]
+                    }
+                  ]
+                })
+              }
+            );
+
+            if (geminiRes.ok) {
+              const data = await geminiRes.json();
+              botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            }
+          } catch (fallbackErr) {
+            console.error("Client fallback chatbot call failed:", fallbackErr);
+          }
+        }
+      }
+
+      if (botResponse) {
+        setMessages(prev => [...prev, { role: "assistant", text: botResponse }]);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          { 
+            role: "assistant", 
+            text: "I'm having a little trouble connecting. Please try again or feel free to message Loveth TopNotch directly on WhatsApp or phone!" 
+          }
+        ]);
+      }
     } catch (err) {
-      setMessages(prev => [...prev, { role: "assistant", text: "I'm having a little trouble. Please try again or call Loveth directly." }]);
+      setMessages(prev => [
+        ...prev,
+        { 
+          role: "assistant", 
+          text: "I'm having a little trouble. Please try again or call Loveth directly." 
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
