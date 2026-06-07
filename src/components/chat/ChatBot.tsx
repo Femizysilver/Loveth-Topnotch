@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, Send, User, Bot, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getChatResponse } from "@/services/geminiService";
 import ReactMarkdown from "react-markdown";
 import { useProperties } from "@/hooks/useProperties";
 
@@ -40,7 +39,24 @@ export default function ChatBot() {
         ? `We current have ${properties.length} active listings including: ${properties.map(p => `${p.title} in ${p.location} for ₦${p.price.toLocaleString()}`).join('; ')}`
         : "We are currently curating new luxury listings. Please ask Loveth for off-market opportunities.";
 
-      const response = await getChatResponse(userMessage, history, propertiesContext);
+      const res = await fetch("/api/chatbot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          history,
+          propertiesContext,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("API call failed");
+      }
+
+      const data = await res.json();
+      const response = data.response;
       setMessages(prev => [...prev, { role: "assistant", text: response || "Something went wrong." }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: "assistant", text: "I'm having a little trouble. Please try again or call Loveth directly." }]);

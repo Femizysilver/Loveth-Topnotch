@@ -114,6 +114,7 @@ export default function AdminPage() {
   // Unified properties hook
   const { properties, loading: propertiesLoading } = useProperties();
   const [inquiries, setInquiries] = useState<any[]>([]);
+  const [newsletters, setNewsletters] = useState<any[]>([]);
 
   // Editable listing states
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -189,6 +190,21 @@ export default function AdminPage() {
         setInquiries(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       },
       (err) => handleFirestoreError(err, "list", "inquiries")
+    );
+    return () => unsubscribe();
+  }, [user]);
+
+  // Fetch newsletters
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, "newsletters"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, 
+      (snap) => {
+        setNewsletters(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      },
+      (err) => {
+        console.warn("Newsletter subscription list fetch failed or offline:", err.message);
+      }
     );
     return () => unsubscribe();
   }, [user]);
@@ -296,6 +312,16 @@ export default function AdminPage() {
       alert("Property deleted successfully.");
     } catch (err) {
       handleFirestoreError(err, "delete", `properties/${id}`);
+    }
+  };
+
+  const handleDeleteNewsletter = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this newsletter subscriber?")) return;
+    try {
+      await deleteDoc(doc(db, "newsletters", id));
+      alert("Subscriber deleted successfully.");
+    } catch (err) {
+      handleFirestoreError(err, "delete", `newsletters/${id}`);
     }
   };
 
@@ -1141,6 +1167,7 @@ export default function AdminPage() {
               Active Listings ({properties.length})
             </TabsTrigger>
             <TabsTrigger value="inquiries" className="rounded-xl px-8 py-3">Property Inquiries</TabsTrigger>
+            <TabsTrigger value="newsletter" className="rounded-xl px-8 py-3">Newsletter Loop ({newsletters.length})</TabsTrigger>
           </TabsList>
           
           <TabsContent value="properties">
@@ -1253,6 +1280,49 @@ export default function AdminPage() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-gray-400">
                           No prospective buyers have initiated communication yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="newsletter">
+            <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow className="border-none">
+                      <TableHead className="px-10 py-6">Subscriber Email</TableHead>
+                      <TableHead>Subscribed At</TableHead>
+                      <TableHead className="text-right px-10">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-black font-medium">
+                    {newsletters.map((newsletter) => (
+                      <TableRow key={newsletter.id} className="hover:bg-gray-50 transition-colors border-b last:border-none">
+                        <TableCell className="px-10 py-6 font-bold font-mono text-sm">{newsletter.email}</TableCell>
+                        <TableCell className="text-xs text-gray-500 font-mono">
+                          {newsletter.createdAt?.toDate?.().toLocaleString() || "Just now"}
+                        </TableCell>
+                        <TableCell className="text-right px-10">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeleteNewsletter(newsletter.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {newsletters.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-12 text-gray-400">
+                          No newsletter or off-market subscribers yet.
                         </TableCell>
                       </TableRow>
                     )}

@@ -232,7 +232,7 @@ export default function HomePage() {
              {/* Using Loveth's photo from assets - since we can't generate images, 
                  we'll use a placeholder but describe it well in alt or use an Unsplash one for demo */}
             <img 
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800&h=1000" 
+              src="https://i.ibb.co/PZBRcgHM/IMG-20260607-WA0024.jpg" 
               alt="Loveth TopNotch"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

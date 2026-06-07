@@ -39,6 +39,16 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "email", "phone", "message", "status", "createdAt"]
+    },
+    "Newsletter": {
+      "title": "Newsletter Subscription",
+      "description": "A signup for email newsletter/listings updates.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "createdAt"]
     }
   },
   "firestore": {
@@ -49,6 +59,10 @@
     "/inquiries/{inquiryId}": {
       "schema": "Inquiry",
       "description": "Contact inquiries (Admin only read)."
+    },
+    "/newsletters/{newsletterId}": {
+      "schema": "Newsletter",
+      "description": "Newsletter email signups."
     }
   }
 }

@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import fs from "fs";
+import { getChatResponse } from "./src/services/geminiService";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,20 @@ async function startServer() {
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/chatbot", async (req, res) => {
+    try {
+      const { message, history, propertiesContext } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required." });
+      }
+      const responseText = await getChatResponse(message, history || [], propertiesContext || "");
+      return res.json({ response: responseText });
+    } catch (err: any) {
+      console.error("[Chatbot Error] Error in /api/chatbot:", err);
+      return res.status(500).json({ error: err.message || "An error occurred in AI Assistant." });
+    }
   });
 
   app.post("/api/upload", (req, res) => {

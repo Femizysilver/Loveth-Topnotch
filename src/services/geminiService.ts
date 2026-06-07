@@ -1,12 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
-import { LOVETH_CONTACT } from "@/constants";
+import { LOVETH_CONTACT } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 export async function getChatResponse(message: string, history: { role: string; parts: { text: string }[] }[], propertiesContext: string) {
   try {
     const model = ai.models.generateContent({
-      model: "gemini-2.5-flash", 
+      model: "gemini-3.5-flash", 
       contents: [
         ...history,
         { role: "user", parts: [{ text: message }] }

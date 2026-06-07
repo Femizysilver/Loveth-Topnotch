@@ -63,6 +63,12 @@ service cloud.firestore {
              data.message is string && data.message.size() <= 3000 &&
              data.status in ['New', 'Contacted', 'Closed'] &&
              data.createdAt == request.time;
+     }
+ 
+    function isValidNewsletter(data) {
+      return data.keys().hasAll(['email', 'createdAt']) && data.keys().size() == 2 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.createdAt == request.time;
     }
 
     // Match Blocks
@@ -91,6 +97,15 @@ service cloud.firestore {
       allow create: if isValidInquiry(incoming());
       allow update: if true;
       allow delete: if true;
+    }
+
+    // Newsletters Collection
+    match /newsletters/{newsletterId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(newsletterId) && isValidNewsletter(incoming());
+      allow update: if false; // Re-subscriptions aren't edited directly
+      allow delete: if isAdmin();
     }
   }
 }

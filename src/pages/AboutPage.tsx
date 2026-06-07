@@ -37,7 +37,7 @@ export default function AboutPage() {
           <div className="absolute -inset-4 gold-bg rounded-3xl opacity-20 group-hover:opacity-30 transition-opacity blur-2xl"></div>
           <div className="relative aspect-[3/4] overflow-hidden rounded-3xl shadow-2xl">
             <img 
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800&h=1000"
+              src="https://i.ibb.co/PZBRcgHM/IMG-20260607-WA0024.jpg"
               alt="Loveth TopNotch"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
