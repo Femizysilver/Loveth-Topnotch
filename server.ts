@@ -6,8 +6,16 @@ import nodemailer from "nodemailer";
 import fs from "fs";
 import { getChatResponse } from "./src/services/geminiService";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let currentFilename = "";
+let currentDirname = "";
+try {
+  currentFilename = fileURLToPath(import.meta.url);
+  currentDirname = path.dirname(currentFilename);
+} catch (e) {
+  // Fallback for CommonJS/bundled environments
+  currentFilename = typeof __filename !== "undefined" ? __filename : "";
+  currentDirname = typeof __dirname !== "undefined" ? __dirname : "";
+}
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), "uploads");

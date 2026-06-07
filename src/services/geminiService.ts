@@ -1,17 +1,29 @@
 import { GoogleGenAI } from "@google/genai";
 import { LOVETH_CONTACT } from "../constants";
 
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+let aiClient: GoogleGenAI | null = null;
+
+function getAIClient() {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("[Gemini Warning] GEMINI_API_KEY is not defined in environment variables.");
     }
+    aiClient = new GoogleGenAI({ 
+      apiKey: apiKey || "placeholder-key-for-initialization",
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
-});
+  return aiClient;
+}
 
 export async function getChatResponse(message: string, history: { role: string; parts: { text: string }[] }[], propertiesContext: string) {
   try {
+    const ai = getAIClient();
     const model = ai.models.generateContent({
       model: "gemini-3.5-flash", 
       contents: [
