@@ -1,15 +1,100 @@
 import Hero from "@/components/home/Hero";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
-import { Home, LandPlot, Key, ShieldCheck, Globe, TrendingUp, Users, MessageSquare, Loader2, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Home, LandPlot, Key, ShieldCheck, Globe, TrendingUp, Users, MessageSquare, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import { LOVETH_CONTACT } from "@/constants";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { handleFirestoreError } from "@/lib/errorHandlers";
 import { useProperties } from "@/hooks/useProperties";
 import PropertyCard from "@/components/properties/PropertyCard";
+
+interface Testimonial {
+  name: string;
+  location: string;
+  tag: string;
+  quote: string;
+  rating: number;
+  avatar: string;
+  property: string;
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    name: "Adebayo Oyetunji",
+    location: "London, UK",
+    tag: "Diaspora Client",
+    quote: "Buying a luxury duplex in Nigeria while living in London was initially stressful. Loveth provided end-to-end transparency, high-definition video walkthroughs, verified titles, and seamless documentation. Her team made me feel completely present in Lagos!",
+    rating: 5,
+    avatar: "AO",
+    property: "Lekki Phase 1 Terrace Buyer"
+  },
+  {
+    name: "Dr. Chinedu & Amanda E.",
+    location: "Dallas, Texas, USA",
+    tag: "Diaspora Investor",
+    quote: "Loveth TopNotch properties helped us secure multiple premium residential plots in Epe & Ajah. The structured installment payment plan was a complete game-changer. Everything was vetted, registered, and physically demarcated perfectly.",
+    rating: 5,
+    avatar: "CE",
+    property: "Epe Prime Land Buyer"
+  },
+  {
+    name: "Yetunde Alabi",
+    location: "Toronto, Canada",
+    tag: "Diaspora Client",
+    quote: "I highly recommend Loveth's agency. She doesn't just sell property; she sells genuine peace of mind. Her constant live video inspections and detailed analysis of materials and neighborhood value made all the difference. She is incredibly trustworthy!",
+    rating: 5,
+    avatar: "YA",
+    property: "Sangotedo Residential Plot Owner"
+  },
+  {
+    name: "Chief Alhaji Bashir M.",
+    location: "Abuja, Nigeria",
+    tag: "Local Corporate Investor",
+    quote: "As a local institutional developer, I appreciate high-efficiency consulting. Loveth's understanding of land titles, gazettes, and real estate ROI is outstanding. We closed transactions with complete regulatory compliance. Absolute 5-star standard.",
+    rating: 5,
+    avatar: "BM",
+    property: "Maitama Commercial Land Client"
+  },
+  {
+    name: "Chief Mrs. Amara Kalu",
+    location: "Lekki, Lagos, Nigeria",
+    tag: "Lagos Resident Buyer",
+    quote: "I bought a 5-bedroom luxury duplex through Loveth and she was brilliant. She helped negotiate terms and handled physical handover ceremonies like a first-class professional. She's the best realtor I have worked with in Nigeria.",
+    rating: 5,
+    avatar: "AK",
+    property: "Luxury 5BR Duplex Owner"
+  }
+];
+
+const slideVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 120 : -120,
+    opacity: 0,
+    scale: 0.95
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    transition: {
+      x: { type: "spring" as const, stiffness: 300, damping: 30 },
+      opacity: { duration: 0.25 },
+      scale: { duration: 0.25 }
+    }
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 120 : -120,
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      x: { type: "spring" as const, stiffness: 300, damping: 30 },
+      opacity: { duration: 0.2 }
+    }
+  })
+};
 
 export default function HomePage() {
   const { properties: dbProperties } = useProperties(3);
@@ -22,6 +107,30 @@ export default function HomePage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Testimonials Carousel State
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const nextTestimonial = () => {
+    setDirection(1);
+    setTestimonialIndex((prev) => (prev + 1) % TESTIMONIALS.length);
+  };
+
+  const prevTestimonial = () => {
+    setDirection(-1);
+    setTestimonialIndex((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
+  };
+
+  useEffect(() => {
+    if (isHovered) return;
+    const interval = setInterval(() => {
+      setDirection(1);
+      setTestimonialIndex((prev) => (prev + 1) % TESTIMONIALS.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isHovered]);
 
   const featuredProperties = useMemo(() => {
     const fallbackMocks = [
@@ -190,27 +299,133 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="bg-[#0A0A0A] text-white py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12">
+      {/* Testimonials Carousel Section */}
+      <section 
+        className="bg-[#0A0A0A] text-white py-24 overflow-hidden relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Subtle gold decorative glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#C9A84C]/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-12 relative z-10">
           <div className="space-y-4">
-            <h2 className="text-4xl font-bold font-serif italic text-[#C9A84C]">Trusted by Global Nigerians</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">See what our clients from across the world have to say about their experience with Loveth TopNotch Properties.</p>
+            <motion.span 
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-xs uppercase tracking-widest font-extrabold text-[#C9A84C] block"
+            >
+              Client Success Stories
+            </motion.span>
+            <motion.h2 
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-5xl font-bold font-serif"
+            >
+              Trusted by <span className="italic font-serif text-[#C9A84C]">Global & Local</span> Clients
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-gray-400 max-w-xl mx-auto text-sm md:text-base font-sans"
+            >
+              Discover the high-trust experience that hundreds of diaspora and home-country buyers enjoy with Loveth TopNotch Properties.
+            </motion.p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-10 border border-white/10 rounded-3xl bg-white/5 space-y-6 text-left italic">
-                <MessageSquare className="text-[#C9A84C]" size={32} />
-                <p className="text-gray-300 leading-relaxed">
-                  "Buying a home in Nigeria from the UK was terrifying until I met Loveth. Her transparency and constant updates via video calls made me feel like I was right there in Lagos."
-                </p>
-                <div>
-                  <p className="font-bold text-white tracking-widest uppercase text-xs">Adebayo O.</p>
-                  <p className="text-[#C9A84C] text-xs mt-1">London, UK</p>
-                </div>
+
+          <div className="relative px-2 md:px-12">
+            <div className="min-h-[360px] md:min-h-[260px] flex items-center justify-center relative">
+              <AnimatePresence initial={false} custom={direction} mode="wait">
+                <motion.div
+                  key={testimonialIndex}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="w-full text-left p-6 md:p-12 border border-white/10 rounded-3xl bg-white/5 backdrop-blur-md flex flex-col justify-between space-y-6 shadow-2xl relative"
+                >
+                  {/* Card Top: Stars & Quote Icon */}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1 text-[#C9A84C]">
+                      {[...Array(TESTIMONIALS[testimonialIndex].rating)].map((_, idx) => (
+                        <Star key={idx} size={16} fill="currentColor" className="text-[#C9A84C]" />
+                      ))}
+                    </div>
+                    <span className="bg-[#C9A84C]/10 text-[#C9A84C] text-[10px] uppercase tracking-wider font-extrabold py-1 px-3 rounded-full border border-[#C9A84C]/25 font-sans">
+                      {TESTIMONIALS[testimonialIndex].tag}
+                    </span>
+                  </div>
+
+                  {/* Card Quote */}
+                  <div className="relative">
+                    <Quote className="absolute -top-6 -left-4 text-white/5 w-16 h-16 pointer-events-none" />
+                    <p className="text-gray-200 text-sm md:text-lg leading-relaxed font-serif italic relative z-10 pl-2">
+                      "{TESTIMONIALS[testimonialIndex].quote}"
+                    </p>
+                  </div>
+
+                  {/* Card Footer: User details */}
+                  <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                    <div className="w-12 h-12 rounded-full bg-[#C9A84C]/20 border border-[#C9A84C]/50 flex items-center justify-center text-white font-bold text-sm tracking-wider font-sans shrink-0">
+                      {TESTIMONIALS[testimonialIndex].avatar}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm md:text-base font-sans">{TESTIMONIALS[testimonialIndex].name}</h4>
+                      <p className="text-[11px] md:text-xs text-gray-400 font-medium flex flex-wrap items-center gap-1 md:gap-1.5 mt-0.5 font-sans">
+                        <span className="text-[#C9A84C] font-semibold">{TESTIMONIALS[testimonialIndex].location}</span>
+                        <span className="text-white/20">•</span>
+                        <span>{TESTIMONIALS[testimonialIndex].property}</span>
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Navigation Controls */}
+            <div className="flex justify-between items-center mt-8 md:mt-0">
+              {/* Desktop arrow left */}
+              <button
+                type="button"
+                onClick={prevTestimonial}
+                className="md:absolute md:top-1/2 md:-left-8 md:-translate-y-1/2 p-3 rounded-full border border-white/10 hover:border-[#C9A84C] bg-white/5 hover:bg-[#C9A84C] hover:text-black text-white transition-all cursor-pointer z-20 group"
+                aria-label="Previous testimonial"
+              >
+                <ChevronLeft size={20} className="transition-transform group-hover:-translate-x-0.5" />
+              </button>
+
+              {/* Dot indicators */}
+              <div className="flex items-center gap-2 mx-auto">
+                {TESTIMONIALS.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setDirection(idx > testimonialIndex ? 1 : -1);
+                      setTestimonialIndex(idx);
+                    }}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      idx === testimonialIndex ? "w-8 bg-[#C9A84C]" : "w-2 bg-white/20 hover:bg-white/40"
+                    }`}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
               </div>
-            ))}
+
+              {/* Desktop arrow right */}
+              <button
+                type="button"
+                onClick={nextTestimonial}
+                className="md:absolute md:top-1/2 md:-right-8 md:-translate-y-1/2 p-3 rounded-full border border-white/10 hover:border-[#C9A84C] bg-white/5 hover:bg-[#C9A84C] hover:text-black text-white transition-all cursor-pointer z-20 group"
+                aria-label="Next testimonial"
+              >
+                <ChevronRight size={20} className="transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
